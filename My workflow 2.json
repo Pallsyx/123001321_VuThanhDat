@@ -1,0 +1,347 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "55609ef7-7ec1-4e15-9278-c31011dffcf1",
+      "name": "Telegram Trigger",
+      "webhookId": "25b5caf0-49d3-4daa-87db-2d3263f8a337",
+      "credentials": {
+        "telegramApi": {
+          "id": "y48GD0s5dB4zZTfv",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.photo.pop().file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "624f38e3-bcbd-47ac-acd2-fa6854994476",
+      "name": "Get a file",
+      "webhookId": "3f4b8c7e-5012-41f3-8226-84d19aee003f",
+      "credentials": {
+        "telegramApi": {
+          "id": "y48GD0s5dB4zZTfv",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"caption\"] }}.png",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "16832h3q6oa6-eSexGFrWVcGiuMDefvNt",
+          "mode": "list",
+          "cachedResultName": "BT_n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/16832h3q6oa6-eSexGFrWVcGiuMDefvNt"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        960,
+        0
+      ],
+      "id": "bb81aab0-f000-4228-ac92-099893815d72",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bB6eUtmZuz7OFxEl",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stability.ai/v2beta/stable-image/generate/sd3",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpMultipleHeadersAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "image/*"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $node[\"For Edit Image\"].json.prompt }}"
+            },
+            {
+              "name": "mode",
+              "value": "image-to-image"
+            },
+            {
+              "name": "strength",
+              "value": "0.7"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        224
+      ],
+      "id": "f5e6ed3c-ae58-48ff-abbf-5029199681cf",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpMultipleHeadersAuth": {
+          "id": "wP3CPgNhIz4IbsXq",
+          "name": "Multiple Headers Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.remove.bg/v1.0/removebg",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image_file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "size",
+              "value": "auto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "5752ca8b-8bfa-4699-851c-b90ed3ea6433",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2r9HNT0NZRLpYb6L",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy caption từ Telegram, nếu không có thì đặt tên mặc định\nconst caption = $node[\"Telegram Trigger\"].json.message.caption || \"anh_xoa_nen\";\n\n// Làm sạch chuỗi (xóa ký tự đặc biệt, thay khoảng trắng bằng gạch dưới)\nconst safeName = caption.replace(/[^a-zA-Z0-9]/g, \"_\").replace(/_+/g, \"_\").toLowerCase();\n\n// Lấy toàn bộ dữ liệu từ node trước (bao gồm cả file ảnh binary)\nconst items = $input.all();\n\n// Gắn thêm tên file chuẩn vào dữ liệu\nitems[0].json.fileName = `${safeName}.png`;\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "6e41c326-ee4d-42bc-b0be-f2af116d7e45",
+      "name": "For BackgroundRemove"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.photo.pop().file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        224
+      ],
+      "id": "e2d947b8-cf6c-4cf2-b374-d5d41bc20af2",
+      "name": "Get a file1",
+      "webhookId": "3f4b8c7e-5012-41f3-8226-84d19aee003f",
+      "credentials": {
+        "telegramApi": {
+          "id": "y48GD0s5dB4zZTfv",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $node[\"For Edit Image\"].json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "16832h3q6oa6-eSexGFrWVcGiuMDefvNt",
+          "mode": "list",
+          "cachedResultName": "BT_n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/16832h3q6oa6-eSexGFrWVcGiuMDefvNt"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        912,
+        224
+      ],
+      "id": "262b8a5c-79f7-4ca7-aa32-d6fb50a1d849",
+      "name": "Upload file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bB6eUtmZuz7OFxEl",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy toàn bộ dữ liệu (bao gồm cả Binary) từ node trước\nconst items = $input.all();\n\n// Xử lý tên file (như bạn đã làm)\nconst caption = $node[\"Telegram Trigger\"].json.message.caption || \"anh_chinh_sua\";\nconst safeName = caption.replace(/[^a-zA-Z0-9]/g, \"_\").toLowerCase();\n\n// Gắn tên file vào JSON nhưng KHÔNG làm mất Binary\nitems[0].json.fileName = `${safeName}.png`;\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        224
+      ],
+      "id": "50f9b6fa-46c3-4aaa-8c02-cd63c10eaa2d",
+      "name": "For Edit Image"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "For BackgroundRemove",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Upload file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "For BackgroundRemove": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file1": {
+      "main": [
+        [
+          {
+            "node": "For Edit Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "For Edit Image": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d96e4465-e9de-4f25-831c-91c273cb06d1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bf36f1de149c424e11bdd2043b58a3fb130363bf718422bb5f4d63279697bd4a"
+  },
+  "id": "cywp6C9httS7pb0o",
+  "tags": []
+}
